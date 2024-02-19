@@ -1,0 +1,9 @@
+{
+	"name": "priyanka2024datafactory",
+	"location": "canadaeast",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "a5714739-37e8-4d48-889a-42e783cf9f0a",
+		"tenantId": "8ad17c7b-760e-466d-980d-de7d921d85d3"
+	}
+}

@@ -1,0 +1,202 @@
+{
+	"name": "dataflow_scd1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Source",
+						"type": "LinkedServiceReference"
+					},
+					"name": "SRCcutomer"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "target"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "srcselect1"
+				},
+				{
+					"name": "trselect1"
+				},
+				{
+					"name": "exists1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customeID as integer,",
+				"          Name as string,",
+				"          location as string,",
+				"          Sales as decimal(19,4)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'query',",
+				"     store: 'sqlserver',",
+				"     query: 'SELECT*FROM customer1',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> SRCcutomer",
+				"source(output(",
+				"          CustomerID as integer,",
+				"          NAME as string,",
+				"          LOCATION as string,",
+				"          SALES as decimal(19,4),",
+				"          FLAG as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> target",
+				"SRCcutomer select(mapColumn(",
+				"          src_customeID = customeID,",
+				"          src_Name = Name,",
+				"          src_location = location,",
+				"          src_Sales = Sales",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> srcselect1",
+				"target select(mapColumn(",
+				"          trg_CustomerID = CustomerID,",
+				"          trg_NAME = NAME,",
+				"          trg_LOCATION = LOCATION,",
+				"          trg_SALES = SALES,",
+				"          trg_FLAG = FLAG",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> trselect1",
+				"srcselect1, trselect1 exists(src_customeID == trg_CustomerID,",
+				"     negate:true,",
+				"     broadcast: 'auto')~> exists1",
+				"exists1 derive(flag = 0) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          customeID = src_customeID,",
+				"          Name = src_Name,",
+				"          {_location} = src_location,",
+				"          Sales = src_Sales,",
+				"          flag",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"srcselect1, trselect1 lookup(src_customeID == trg_CustomerID,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup1",
+				"derivedColumn2 filter(isupdated==1) ~> filter1",
+				"lookup1 derive(isupdated = iif(src_Name!=trg_NAME||trg_LOCATION!=src_location||src_Sales!=trg_SALES,1,0),",
+				"          flag = 1) ~> derivedColumn2",
+				"filter1 select(mapColumn(",
+				"          customeID = src_customeID,",
+				"          Name = src_Name,",
+				"          location = src_location,",
+				"          Sales = src_Sales,",
+				"          flag",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          CustomerID as integer,",
+				"          NAME as string,",
+				"          LOCATION as string,",
+				"          SALES as decimal(19,4),",
+				"          FLAG as integer",
+				"     ),",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          CustomerID = customeID,",
+				"          NAME = Name,",
+				"          LOCATION = {_location},",
+				"          SALES = Sales,",
+				"          FLAG = flag",
+				"     )) ~> sink1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          CustomerID as integer,",
+				"          NAME as string,",
+				"          LOCATION as string,",
+				"          SALES as decimal(19,4),",
+				"          FLAG as integer",
+				"     ),",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer',",
+				"     insertable: true,",
+				"     updateable: true,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     keys:['customeID'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          CustomerID = customeID,",
+				"          NAME = Name,",
+				"          LOCATION = location,",
+				"          SALES = Sales,",
+				"          FLAG = flag",
+				"     )) ~> sink2"
+			]
+		}
+	}
+}

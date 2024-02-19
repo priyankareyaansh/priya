@@ -1,0 +1,32 @@
+{
+	"name": "pipeline1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vfilename",
+					"value": {
+						"value": "@concat(\n    substring('item().name',0,indexof('item().name','.')),\n    '_',\n    formatDateTime(utcnow(),'MMddyyyy')\n    )",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"vfilename": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-02-09T16:53:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
