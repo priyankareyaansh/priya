@@ -19,7 +19,15 @@
 					"name": "trc"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				}
+			],
 			"transformations": [
 				{
 					"name": "select1"
@@ -44,6 +52,15 @@
 				},
 				{
 					"name": "select3"
+				},
+				{
+					"name": "select4"
+				},
+				{
+					"name": "union1"
+				},
+				{
+					"name": "derivedColumn2startdate"
 				}
 			],
 			"scriptLines": [
@@ -101,20 +118,43 @@
 				"split1@exsited derive(Isupdated = iif(src_Name!=trg_Name||trg_location!=src_location,'yes','no')) ~> derivedColumn1",
 				"derivedColumn1 filter(Isupdated=='yes') ~> filter1",
 				"filter1 select(mapColumn(",
-				"          src_customeID,",
-				"          src_Name,",
-				"          src_location,",
-				"          src_Sales,",
-				"          trg_customerkey,",
-				"          trg_customerID,",
-				"          trg_Name,",
-				"          trg_location,",
-				"          trg_sales,",
-				"          isinsertedorupdated,",
-				"          Isupdated",
+				"          customeID = src_customeID,",
+				"          Name = src_Name,",
+				"          location = src_location,",
+				"          Sales = src_Sales",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> select3"
+				"     skipDuplicateMapOutputs: true) ~> select3",
+				"split1@Newrecord select(mapColumn(",
+				"          customeID = src_customeID,",
+				"          Name = src_Name,",
+				"          location = src_location,",
+				"          Sales = src_Sales",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select4",
+				"select4, select3 union(byName: true)~> union1",
+				"union1 derive(STARTDATE = currentDate()) ~> derivedColumn2startdate",
+				"derivedColumn2startdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer_scd',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customeID,",
+				"          Name,",
+				"          location,",
+				"          Sales,",
+				"          STARTDATE",
+				"     )) ~> sink1"
 			]
 		}
 	}
