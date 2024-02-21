@@ -77,6 +77,9 @@
 				},
 				{
 					"name": "alterRow1"
+				},
+				{
+					"name": "AlterRow2"
 				}
 			],
 			"scriptLines": [
@@ -165,6 +168,7 @@
 				"     skipDuplicateMapOutputs: true) ~> select5",
 				"select3 derive({END DATE} = currentDate()) ~> derivedColumn2",
 				"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"derivedColumn2startdate alterRow(insertIf(customerkey==1)) ~> AlterRow2",
 				"alterRow1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'table',",
@@ -175,7 +179,7 @@
 				"     updateable: true,",
 				"     deletable: false,",
 				"     upsertable: false,",
-				"     keys:['customerkey'],",
+				"     keys:['END DATE'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
@@ -183,7 +187,7 @@
 				"          customerkey,",
 				"          {END DATE}",
 				"     )) ~> sink2",
-				"derivedColumn2startdate sink(allowSchemaDrift: true,",
+				"AlterRow2 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          customerkey as integer,",
@@ -198,20 +202,19 @@
 				"     store: 'sqlserver',",
 				"     schemaName: 'dbo',",
 				"     tableName: 'customer_scd',",
-				"     insertable: false,",
-				"     updateable: true,",
+				"     insertable: true,",
+				"     updateable: false,",
 				"     deletable: false,",
 				"     upsertable: false,",
-				"     keys:['customerkey'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
 				"     mapColumn(",
+				"          customerkey,",
 				"          customerID = customeID,",
 				"          Name,",
 				"          location,",
 				"          Sales,",
-				"          customerkey,",
 				"          STARTDATE",
 				"     )) ~> sink3"
 			]
