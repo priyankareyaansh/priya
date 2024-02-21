@@ -61,6 +61,12 @@
 				},
 				{
 					"name": "derivedColumn2startdate"
+				},
+				{
+					"name": "select5"
+				},
+				{
+					"name": "derivedColumn2"
 				}
 			],
 			"scriptLines": [
@@ -118,10 +124,7 @@
 				"split1@exsited derive(Isupdated = iif(src_Name!=trg_Name||trg_location!=src_location,'yes','no')) ~> derivedColumn1",
 				"derivedColumn1 filter(Isupdated=='yes') ~> filter1",
 				"filter1 select(mapColumn(",
-				"          customeID = src_customeID,",
-				"          Name = src_Name,",
-				"          location = src_location,",
-				"          Sales = src_Sales",
+				"          customerkey = trg_customerkey",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select3",
@@ -135,6 +138,22 @@
 				"     skipDuplicateMapOutputs: true) ~> select4",
 				"select4, select3 union(byName: true)~> union1",
 				"union1 derive(STARTDATE = currentDate()) ~> derivedColumn2startdate",
+				"filter1 select(mapColumn(",
+				"          src_customeID,",
+				"          src_Name,",
+				"          src_location,",
+				"          src_Sales,",
+				"          trg_customerkey,",
+				"          trg_customerID,",
+				"          trg_Name,",
+				"          trg_location,",
+				"          trg_sales,",
+				"          isinsertedorupdated,",
+				"          Isupdated",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select5",
+				"select3 derive({END DATE} = currentDate()) ~> derivedColumn2",
 				"derivedColumn2startdate sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'table',",
