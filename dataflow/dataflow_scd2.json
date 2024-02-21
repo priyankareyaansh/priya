@@ -25,7 +25,14 @@
 						"referenceName": "AzureSqlDatabase_Target",
 						"type": "LinkedServiceReference"
 					},
-					"name": "sink1"
+					"name": "sink2"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink3"
 				}
 			],
 			"transformations": [
@@ -67,6 +74,9 @@
 				},
 				{
 					"name": "derivedColumn2"
+				},
+				{
+					"name": "alterRow1"
 				}
 			],
 			"scriptLines": [
@@ -154,16 +164,36 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select5",
 				"select3 derive({END DATE} = currentDate()) ~> derivedColumn2",
+				"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer_scd',",
+				"     insertable: false,",
+				"     updateable: true,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     keys:['customerkey'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customerkey,",
+				"          {END DATE}",
+				"     )) ~> sink2",
 				"derivedColumn2startdate sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'table',",
 				"     store: 'sqlserver',",
 				"     schemaName: 'dbo',",
 				"     tableName: 'customer_scd',",
-				"     insertable: true,",
-				"     updateable: false,",
+				"     insertable: false,",
+				"     updateable: true,",
 				"     deletable: false,",
 				"     upsertable: false,",
+				"     keys:['customerkey'],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
@@ -172,8 +202,9 @@
 				"          Name,",
 				"          location,",
 				"          Sales,",
+				"          customerkey,",
 				"          STARTDATE",
-				"     )) ~> sink1"
+				"     )) ~> sink3"
 			]
 		}
 	}
