@@ -1,0 +1,223 @@
+{
+	"name": "dataflow_scd2",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Source",
+						"type": "LinkedServiceReference"
+					},
+					"name": "src"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "trc"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink2"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureSqlDatabase_Target",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink3"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select1"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "derivedColumnisinsertedorupdated"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "select3"
+				},
+				{
+					"name": "select4"
+				},
+				{
+					"name": "union1"
+				},
+				{
+					"name": "derivedColumn2startdate"
+				},
+				{
+					"name": "select5"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "AlterRow2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customeID as integer,",
+				"          Name as string,",
+				"          location as string,",
+				"          Sales as decimal(19,4)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer1',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> src",
+				"source(output(",
+				"          customerkey as integer,",
+				"          customerID as integer,",
+				"          Name as string,",
+				"          location as string,",
+				"          sales as decimal(19,4)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'query',",
+				"     store: 'sqlserver',",
+				"     query: 'select customerkey,customerID,Name,location,sales from customer_scd\\nwhere ENDDATE IS NULL',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> trc",
+				"src select(mapColumn(",
+				"          src_customeID = customeID,",
+				"          src_Name = Name,",
+				"          src_location = location,",
+				"          src_Sales = Sales",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"trc select(mapColumn(",
+				"          trg_customerkey = customerkey,",
+				"          trg_customerID = customerID,",
+				"          trg_Name = Name,",
+				"          trg_location = location,",
+				"          trg_sales = sales",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select1, select2 lookup(src_customeID == trg_customerID,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1 derive(isinsertedorupdated = iif(isNull(trg_customerkey),'newrecord','existed')) ~> derivedColumnisinsertedorupdated",
+				"derivedColumnisinsertedorupdated split(isinsertedorupdated=='newrecord',",
+				"     isinsertedorupdated=='existed',",
+				"     disjoint: false) ~> split1@(Newrecord, exsited)",
+				"split1@exsited derive(Isupdated = iif(src_Name!=trg_Name||trg_location!=src_location,'yes','no')) ~> derivedColumn1",
+				"derivedColumn1 filter(Isupdated=='yes') ~> filter1",
+				"filter1 select(mapColumn(",
+				"          customerkey = trg_customerkey",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select3",
+				"split1@Newrecord select(mapColumn(",
+				"          customeID = src_customeID,",
+				"          Name = src_Name,",
+				"          location = src_location,",
+				"          Sales = src_Sales",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select4",
+				"select4, select3 union(byName: true)~> union1",
+				"union1 derive(STARTDATE = currentDate()) ~> derivedColumn2startdate",
+				"filter1 select(mapColumn(",
+				"          src_customeID,",
+				"          src_Name,",
+				"          src_location,",
+				"          src_Sales,",
+				"          trg_customerkey,",
+				"          trg_customerID,",
+				"          trg_Name,",
+				"          trg_location,",
+				"          trg_sales,",
+				"          isinsertedorupdated,",
+				"          Isupdated",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select5",
+				"select3 derive({END DATE} = currentDate()) ~> derivedColumn2",
+				"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"derivedColumn2startdate alterRow(insertIf(customerkey==1)) ~> AlterRow2",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer_scd',",
+				"     insertable: false,",
+				"     updateable: true,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     keys:['END DATE'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customerkey,",
+				"          {END DATE}",
+				"     )) ~> sink2",
+				"AlterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          customerkey as integer,",
+				"          customerID as integer,",
+				"          Name as string,",
+				"          location as string,",
+				"          Sales as decimal(19,4),",
+				"          STARTDATE as timestamp,",
+				"          ENDDATE as timestamp",
+				"     ),",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'customer_scd',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customerkey,",
+				"          customerID = customeID,",
+				"          Name,",
+				"          location,",
+				"          Sales,",
+				"          STARTDATE",
+				"     )) ~> sink3"
+			]
+		}
+	}
+}
