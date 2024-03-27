@@ -1,0 +1,9 @@
+{
+	"name": "Priyankakarri-adf",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "212465be-70ac-43d7-8f29-e943892655b3",
+		"tenantId": "a2376ff0-d9e7-4302-b6a5-9408b25f129c"
+	}
+}
